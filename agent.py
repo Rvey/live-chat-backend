@@ -16,7 +16,7 @@ from livekit.agents import (
 from livekit.agents.pipeline import VoicePipelineAgent
 from livekit.plugins import openai, deepgram, silero
 from livekit.plugins import turn_detector
-
+from tools import AssistantFnc
 
 load_dotenv(dotenv_path=".env.local")
 logger = logging.getLogger("voice-agent")
@@ -35,35 +35,12 @@ async def entrypoint(ctx: JobContext):
         ),
     )
     # first define a class that inherits from llm.FunctionContext
-    class AssistantFnc(llm.FunctionContext):
-        # the llm.ai_callable decorator marks this function as a tool available to the LLM
-        # by default, it'll use the docstring as the function's description
-        @llm.ai_callable()
-        async def get_weather(
-            self,
-            # by using the Annotated type, arg description and type are available to the LLM
-            location: Annotated[
-                str, llm.TypeInfo(description="The location to get the weather for")
-            ],
-        ):
-            """Called when the user asks about the weather. This function will return the weather for the given location."""
-            logger.info(f"getting weather for {location}")
-            url = f"https://wttr.in/{location}?format=%C+%t"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    if response.status == 200:
-                        weather_data = await response.text()
-                        # response from the function call is returned to the LLM
-                        # as a tool response. The LLM's response will include this data
-                        return f"The weather in {location} is {weather_data}."
-                    else:
-                        raise f"Failed to get weather data, status code: {response.status}"
-
-    fnc_ctx = AssistantFnc()
+   
 
     logger.info(f"connecting to room {ctx.room.name}")
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
-
+    # initialize the AssistantFnc class and pass it to the VoicePipelineAgent
+    func_ctx = AssistantFnc()
     # Wait for the first participant to connect
     participant = await ctx.wait_for_participant()
     logger.info(f"starting voice assistant for participant {participant.identity}")
@@ -76,10 +53,11 @@ async def entrypoint(ctx: JobContext):
         vad=ctx.proc.userdata["vad"],
         # turn_detector=turn_detector.EOUModel(),
         stt=openai.STT.with_groq(model="whisper-large-v3-turbo"),
-        llm=openai.LLM(),
+        llm=openai.LLM.with_groq(model="llama-3.3-70b-versatile"),
         tts=openai.TTS(),
         chat_ctx=initial_ctx,
-        fnc_ctx=fnc_ctx,
+        fnc_ctx=func_ctx,
+        max_nested_fnc_calls=5
     )
 
     agent.start(ctx.room, participant)
