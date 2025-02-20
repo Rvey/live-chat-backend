@@ -75,3 +75,25 @@ class AssistantFnc(llm.FunctionContext):
         logger.info(f"getting temperature for {zone}")
         temp = self.temperature[Zone(zone)]
         return f"The temperature in the {zone} is {temp} degrees C."
+    @llm.ai_callable()
+    async def get_news(self):
+        """Called when the user asks for the latest news. This function will return the latest news headlines."""
+        logger.info("getting news")
+        # get news implementation would go here
+        return """Federal government workers have been left “shell-shocked” by the upheaval wreaked by Donald Trump’s return to the presidency amid signs that he is bent on exacting revenge on a bureaucracy he considers to be a “deep state” that previously thwarted and persecuted him.
+
+Since being restored to the White House on 20 January, the president has gone on a revenge spree against high-profile figures who previously served him but earned his enmity by slighting or criticising him in public.
+
+He has cancelled Secret Service protection for three senior national security officials in his first presidency – John Bolton, the former national security adviser; Mike Pompeo, who was CIA director and secretary of state; and Brian Hook, a former assistant secretary of state – even though all are assassination targets on an Iranian government hit list.
+
+The same treatment has been meted out to Anthony Fauci, the infectious diseases expert who angered Trump after joining the White House taskforce tackling Covid-19 and who has also faced death threats.
+
+Trump has also fired high-profile figures from government roles on his social media site and stripped 51 former intelligence officials of their security clearances for doubting reports about Hunter Biden’s laptop as possible Russian disinformation.
+
+Yet whereas Trump’s better-known adversaries were possibly expecting a measure of payback – and in some cases, like Fauci’s, were pardoned by Joe Biden to shield them from prosecution – more intense vengeance may have been felt by anonymous civil servants who were less prepared.
+
+Some senior officials saw the writing on the wall and resigned before his return, but others adopted a hope-for-the-best attitude – only to be shocked by what awaited them, according to insiders.
+
+a silhouetted government building
+Federal workers decry Trump attempt to force mass resignations as ‘cruel joke’
+Read more"""
