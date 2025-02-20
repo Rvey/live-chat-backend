@@ -3,6 +3,7 @@ import logging
 from dotenv import load_dotenv
 from typing import Annotated
 from livekit.plugins import turn_detector
+from livekit.plugins.elevenlabs import tts
 import asyncio
 from livekit import rtc
 from livekit.agents import stt, transcription
@@ -86,20 +87,38 @@ async def entrypoint(ctx: JobContext):
     # Wait for the first participant to connect
     participant = await ctx.wait_for_participant()
     logger.info(f"starting voice assistant for participant {participant.identity}")
-
+    eleven_tts=tts.TTS(
+        model="eleven_turbo_v2_5",
+        api_key="sk_783fc29124493029c3553a30dfc3446998f91de38e814118",
+        voice=tts.Voice(
+            id="A9ATTqUUQ6GHu0coCz8t",
+            name="Hamid",
+            category="premade",
+            settings=tts.VoiceSettings(
+                stability=0.71,
+                similarity_boost=0.5,
+                style=0.0,
+                use_speaker_boost=True
+            ),
+        ),
+        language="ar",
+        streaming_latency=3,
+        enable_ssml_parsing=False,
+        chunk_length_schedule=[80, 120, 200, 260],
+    )
     # This project is configured to use Deepgram STT, OpenAI LLM and TTS plugins
     # Other great providers exist like Cartesia and ElevenLabs
     # Learn more and pick the best one for your app:
     # https://docs.livekit.io/agents/plugins
     agent = VoicePipelineAgent(
         vad=ctx.proc.userdata["vad"],
-        stt=openai.STT.with_groq(model="whisper-large-v3-turbo"),
+        stt=openai.STT(),
         llm=openai.LLM(model="gpt-4o-mini"),
-        tts=openai.TTS(voice="echo"),
+        tts=eleven_tts,
         chat_ctx=initial_ctx,
-        # fnc_ctx=func_ctx,
-        # max_nested_fnc_calls=5,
-        # turn_detector=turn_detector.EOUModel(),
+        fnc_ctx=func_ctx,
+        max_nested_fnc_calls=5,
+        turn_detector=turn_detector.EOUModel(),
     )
 
     agent.start(ctx.room, participant)
