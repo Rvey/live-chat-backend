@@ -105,7 +105,7 @@ class AssistantFnc(llm.FunctionContext):
         """Called when the user asks for the latest news. This function will return the latest news headlines."""
         logger.info("getting news")
         # get news implementation would go here
-        return """Federal government workers have been left “shell-shocked” by the upheaval wreaked by Donald Trump’s return to the presidency amid signs that he is bent on exacting revenge on a bureaucracy he considers to be a “deep state” that previously thwarted and persecuted him.
+        news =  """Federal government workers have been left “shell-shocked” by the upheaval wreaked by Donald Trump’s return to the presidency amid signs that he is bent on exacting revenge on a bureaucracy he considers to be a “deep state” that previously thwarted and persecuted him.
 
 Since being restored to the White House on 20 January, the president has gone on a revenge spree against high-profile figures who previously served him but earned his enmity by slighting or criticising him in public.
 
@@ -122,3 +122,11 @@ Some senior officials saw the writing on the wall and resigned before his return
 a silhouetted government building
 Federal workers decry Trump attempt to force mass resignations as ‘cruel joke’
 Read more"""
+
+        return await self.ctx.room.local_participant.perform_rpc(
+                destination_identity=self.participant.identity,
+                method="get_news",
+                payload=json.dumps({
+                    "news": news
+                }),
+            )
