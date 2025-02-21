@@ -82,10 +82,11 @@ async def entrypoint(ctx: JobContext):
     
     logger.info(f"connecting to room {ctx.room.name}")
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
-    # initialize the AssistantFnc class and pass it to the VoicePipelineAgent
-    func_ctx = AssistantFnc()
+  
     # Wait for the first participant to connect
     participant = await ctx.wait_for_participant()
+    # initialize the AssistantFnc class and pass it to the VoicePipelineAgent
+    func_ctx = AssistantFnc(ctx=ctx, participant=participant)
     logger.info(f"starting voice assistant for participant {participant.identity}")
     eleven_tts=tts.TTS(
         model="eleven_turbo_v2_5",

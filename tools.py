@@ -3,6 +3,7 @@ from typing import Annotated
 from livekit.agents import llm
 import logging
 import aiohttp
+import json
 
 logger = logging.getLogger("weather-agent")
 logger.setLevel(logging.INFO)
@@ -17,7 +18,9 @@ class Zone(enum.Enum):
 
 class AssistantFnc(llm.FunctionContext):
     # the __init__ function is called when the class is instantiated
-    def __init__(self) -> None:
+    def __init__(self, ctx , participant) -> None:
+        self.ctx = ctx
+        self.participant = participant
         super().__init__()
 
         self.temperature = {
@@ -75,6 +78,28 @@ class AssistantFnc(llm.FunctionContext):
         logger.info(f"getting temperature for {zone}")
         temp = self.temperature[Zone(zone)]
         return f"The temperature in the {zone} is {temp} degrees C."
+    
+    @llm.ai_callable()
+    async def get_user_location(self,
+        high_accuracy: Annotated[
+            bool, llm.TypeInfo(description="Whether to use high accuracy mode, which is slower")
+        ] = False
+    ):
+        """Retrieve the user's current geolocation as lat/lng."""
+        try:
+            return await self.ctx.room.local_participant.perform_rpc(
+                destination_identity=self.participant.identity,
+                method="getUserLocation",
+                payload=json.dumps({
+                    "highAccuracy": high_accuracy
+                }),
+                response_timeout=10.0 if high_accuracy else 5.0,
+            )
+        except Exception:
+            return "Unable to retrieve user location"
+
+    
+    
     @llm.ai_callable()
     async def get_news(self):
         """Called when the user asks for the latest news. This function will return the latest news headlines."""
