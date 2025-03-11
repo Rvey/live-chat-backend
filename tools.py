@@ -52,6 +52,7 @@ class AssistantFnc(llm.FunctionContext):
                     return f"The weather in {location} is {weather_data}."
                 else:
                     raise f"Failed to get weather data, status code: {response.status}"
+   
     @llm.ai_callable()
     async def send_email(
         self,
@@ -98,8 +99,6 @@ class AssistantFnc(llm.FunctionContext):
         except Exception:
             return "Unable to retrieve user location"
 
-    
-    
     @llm.ai_callable()
     async def get_news(self):
         """Called when the user asks for the latest news. This function will return the latest news headlines."""

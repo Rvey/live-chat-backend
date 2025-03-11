@@ -8,6 +8,7 @@ import asyncio
 from livekit import rtc
 from livekit.agents import stt, transcription
 from livekit.agents import llm
+from agent_extensions.agent_extensions.handlers import WakeWordHandler
 from livekit.agents import (
     AutoSubscribe,
     JobContext,
@@ -50,10 +51,12 @@ async def entrypoint(ctx: JobContext):
             """you are a helpful assistant"""
         ),
     )
-    
+    wake_word_handler = WakeWordHandler(
+        wake_word="Hey, showy!",
+        # notification_sound_path="path/to/sound.wav"
+    )
     stt = openai.STT()
     tasks = []
-
     async def transcribe_track(participant: rtc.RemoteParticipant, track: rtc.Track):
         audio_stream = rtc.AudioStream(track)
         stt_forwarder = transcription.STTSegmentsForwarder(
@@ -79,15 +82,22 @@ async def entrypoint(ctx: JobContext):
             tasks.append(asyncio.create_task(transcribe_track(participant, track)))
         logger.error("subscribed to track")
     
-    
-    logger.info(f"connecting to room {ctx.room.name}")
+    # def _before_tts_cb(agent: VoicePipelineAgent, text: str | AsyncIterable[str]):
+    # # The TTS is incorrectly pronouncing "LiveKit", so we'll replace it with a phonetic
+    # # spelling
+    #     return text.replace("LiveKit", "Live Kit")
+    #     llm = openai.LLM(model="gpt-4o")
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
   
     # Wait for the first participant to connect
     participant = await ctx.wait_for_participant()
+    participant_attributes = participant.attributes
+    logger.info(f"connecting to room {participant.attributes.get('room_name')}")
+
     # initialize the AssistantFnc class and pass it to the VoicePipelineAgent
     func_ctx = AssistantFnc(ctx=ctx, participant=participant)
     logger.info(f"starting voice assistant for participant {participant.identity}")
+
     eleven_tts=tts.TTS(
         model="eleven_turbo_v2_5",
         api_key="sk_783fc29124493029c3553a30dfc3446998f91de38e814118",
@@ -113,10 +123,11 @@ async def entrypoint(ctx: JobContext):
     # https://docs.livekit.io/agents/plugins
     agent = VoicePipelineAgent(
         vad=ctx.proc.userdata["vad"],
-        stt=openai.STT(),
-        llm=openai.LLM(model="gpt-4o-mini"),
+        stt=openai.STT(model="whisper-1", language=participant_attributes.get("language")),
+        llm=openai.LLM(model="gpt-4o"),
         tts=eleven_tts,
         chat_ctx=initial_ctx,
+        # before_llm_cb=wake_word_handler.before_llm_callback,
         fnc_ctx=func_ctx,
         max_nested_fnc_calls=5,
         turn_detector=turn_detector.EOUModel(),
@@ -125,7 +136,7 @@ async def entrypoint(ctx: JobContext):
     agent.start(ctx.room, participant)
 
     # The agent should be polite and greet the user when it joins :)
-    await agent.say("Hey, how can help you today", allow_interruptions=True)
+    await agent.say(participant_attributes.get("intro"), allow_interruptions=True)
 
 
 if __name__ == "__main__":
